@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Big Nine European League Teams</title>
+<script type="text/javascript" src="../lib/d3.v5.min.js"></script>
+     <script type="text/javascript" src="../lib/d3-dsv.min.js"></script>
+	<script type="text/javascript" src="../lib/d3-geo-projection.v2.min.js"></script>
+	<script type="text/javascript" src="../lib/d3-legend.min.js"></script>
+	<script type="text/javascript" src="../lib/d3-tip.min.js"></script>
+	<script type="text/javascript" src="../lib/topojson.v2.min.js"></script>
+		<style type="text/css">
+
+
+			svg {
+				background-color: white;
+			}
+
+			h1 {
+				color: #383838;
+				text-align: center;
+				font-size: 26px;
+				font-family: cambria;
+				font-weight: bold;
+				margin: 0;
+				padding-bottom: 10px;
+
+			}
+
+				#container {
+				width: 1100px;
+				margin-left: auto;
+				margin-right: auto;
+				margin-top: 0px;
+				padding: 20px;
+				background-color: white;
+				box-shadow: 1px 1px 1px 2px rgb(217, 217, 217);
+			}
+
+
+
+div.tooltip {	
+    position: absolute;			
+    text-align: center;			
+    width: auto;					
+    height: auto;					
+    padding: 4px;				
+    font: 10px sans-serif;		
+    background: #fff;	
+    border: 2px;
+    border-color: #000;		
+    border-radius: 8px;			
+    pointer-events: none;			
+}
+
+		</style>
+	</head>
+	<body>
+
+	<div id="container">
+		<h1>UEFA Big Nine Teams, 2020-21 Season</h1>
+
+	</div>
+		
+
+		<script type="text/javascript">
+
+
+
+			//Width and height
+			var margin = {top: 20, right: 50, bottom: 50, left: 50}
+ 			 , width = 1200 - margin.left - margin.right 
+ 			 , height = 700 - margin.top - margin.bottom; 
+
+			//Define map projection
+
+
+			var projection = d3.geoConicEquidistant()
+								   .rotate([-20.0, 0.0])
+								   .center([ -7, 49 ]) 
+								   .translate([ width/2, height/2 ]) 
+								   .scale([ width/0.95 ]); // zoom
+
+			//Define path generator
+			var path = d3.geoPath()
+				.projection(projection);
+
+
+			//Create SVG
+			var map = d3.select("#container")
+						.append("svg")
+						.attr("width", width)
+						.attr("height", height);
+
+
+Promise.all([
+            d3.csv('Stadium Coords.csv',function(d){
+			return {team: d.Team_Original,
+				stadium: d.Stadium,
+				city: d.City,
+				country: d.Country,
+				league: d.League,
+				capacity: +d["Capacity"],
+				lat: +d["Lat"],
+				long: +d["Long"]
+			}}),
+  	    d3.json('detail_countries.json')
+			
+        ]).then(
+           function(values) {
+	ready(values[1],values[0]);
+});
+
+function ready(europe, stads) {
+
+stads.sort(function(x, y){
+   return d3.descending(x.capacity, y.capacity);
+});
+
+leaguelist = d3.map(stads, function(d){return d.league;}).keys()
+
+leaguelist.sort(d3.ascending);
+
+var nf = d3.format(",")
+
+var color = d3.scaleOrdinal()
+		.domain(leaguelist)
+		.range(d3.schemeCategory10);
+
+var radius = d3.scaleSqrt()
+    .domain([0, 1e6])
+    .range([0, 30]);
+
+var div = d3.select("body").append("div")	
+    .attr("class", "tooltip")				
+    .style("opacity", 0);
+
+
+				var countries = map.selectAll("path")
+				   .data(europe.features)
+				   .enter()
+				   .append("path")
+				   .attr("d", path)
+				   .attr("stroke", "#b2b2b2")
+				   .attr("fill", "#eaeaea");
+
+
+		map.selectAll("countries")
+  .data(stads)
+	//.sort(function(a, b) { return b.capacity - a.capacity; }))
+  .enter().append("circle")
+  .attr("r", function(d) {return radius(d.capacity)})
+  .attr("fill", function(d) {return color(d.league)})
+  .attr("opacity",0.6)
+  .attr("transform", function(d) {
+    return "translate(" + projection([
+      d.long,
+      d.lat
+    ]) + ")";
+  })
+  .on("mouseover",moverevent)
+      .on("mouseout",moutevent);
+
+
+
+map.selectAll("mydots")
+  .data(leaguelist)
+  .enter()
+  .append("circle")
+    .attr("cx", 30)
+    .attr("cy", function(d,i){ return 30 + i*20})
+    .attr("r", 5)
+    .attr("opacity",0.8)
+    .style("fill", function(d){ return color(d)})
+	
+
+map.selectAll("mylabels")
+  .data(leaguelist)
+  .enter()
+  .append("text")
+    .attr("x", 40)
+    .attr("y", function(d,i){ return 35 + i*20}) 
+    .attr("font-family","cambria")
+    .style("fill", "#383838")
+    .text(function(d){ return d})
+    .attr("text-anchor", "right")
+    .style("alignment-baseline", "middle")
+    .style("font-size", "12px")
+    .style("font-weight","bold")
+		
+function moverevent(d) {
+d3.select(this).attr("r", 12);
+div.transition()		
+                .duration(200)		
+                .style("opacity", .85);		
+            div.html("<b>Team Name: </b>"+d.team + "<br/><b>City: </b>"+d.city+
+		"<br/><b>Home Field: </b>"+d.stadium+"<br/>(Capacity: "+nf(d.capacity)+")")
+		.style("left", (d3.event.pageX) + "px")		
+                .style("top", (d3.event.pageY) + "px");	
+}
+
+function moutevent(d) {
+d3.select(this).attr("r",function(d) {return radius(d.capacity)});
+div.transition()		
+                .duration(200)		
+                .style("opacity", 0);
+}
+
+
+};
+
+			
+
+		
+
+
+		
+		</script>
+	</body>
+</html>
