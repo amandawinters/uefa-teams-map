@@ -72,8 +72,6 @@ div.tooltip {
  			 , width = 1200 - margin.left - margin.right 
  			 , height = 700 - margin.top - margin.bottom; 
 
-			//Define map projection
-
 
 			var projection = d3.geoConicEquidistant()
 								   .rotate([-20.0, 0.0])
@@ -81,12 +79,10 @@ div.tooltip {
 								   .translate([ width/2, height/2 ]) 
 								   .scale([ width/0.95 ]); // zoom
 
-			//Define path generator
 			var path = d3.geoPath()
 				.projection(projection);
 
 
-			//Create SVG
 			var map = d3.select("#container")
 						.append("svg")
 						.attr("width", width)
@@ -129,7 +125,7 @@ var color = d3.scaleOrdinal()
 
 var radius = d3.scaleSqrt()
     .domain([0, 1e6])
-    .range([0, 25]);
+    .range([0, 20]);
 
 var div = d3.select("body").append("div")	
     .attr("class", "tooltip")				
@@ -147,7 +143,6 @@ var div = d3.select("body").append("div")
 
 		map.selectAll("countries")
   .data(stads)
-	//.sort(function(a, b) { return b.capacity - a.capacity; }))
   .enter().append("circle")
   .attr("r", function(d) {return radius(d.capacity)})
   .attr("fill", function(d) {return color(d.league)})
